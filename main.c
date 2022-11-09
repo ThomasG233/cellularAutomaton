@@ -47,6 +47,7 @@ int main()
         {
             printf("Could not initialise grid values successfully.\n");
         }
+    free(gPtr);
     }
     else // if memory couldn't be allocated.
     {
