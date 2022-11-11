@@ -1,9 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "grid.h"
+/*
+int collectGenerationInfo(int *genNumber)
+{
+    printf("Enter the number of generations you wish to create: ");
+    scanf("%d", genNumber);
+    if(*genNumber < 1 || *genNumber > 30)
+    {
+        return 1;
+    }
+    return 0;
+}
+*/
 
 int main()
 {
+    int binaryRuleset[] = {0,0,0,1,1,1,1,0}; 
+    
     // Create a Grid pointer and allocate memory.
     GridGenerations *gPtr;
     gPtr = (GridGenerations*)malloc(sizeof(GridGenerations));
@@ -23,16 +37,37 @@ int main()
                 for(int i = 1; i < GRID_SIZE; i++)
                 {
                     // Checks to see if ruleset applies.
-                    if((gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1) 
-                        || (gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
-                        || (gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
-                        || (gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 0))
+                    if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1)
                     {
-                        gPtr->newRow[i] = 0;
+                        gPtr->newRow[i] = binaryRuleset[0];
+                    }
+                    else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
+                    {
+                        gPtr->newRow[i] = binaryRuleset[1];
+                    }
+                    else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
+                    {
+                        gPtr->newRow[i] = binaryRuleset[2];
+                    }
+                    else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 0)
+                    {
+                        gPtr->newRow[i] = binaryRuleset[3];
+                    }
+                    else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1)
+                    {
+                        gPtr->newRow[i] = binaryRuleset[4];
+                    }
+                    else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
+                    {
+                        gPtr->newRow[i] = binaryRuleset[5];
+                    }
+                    else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
+                    {
+                        gPtr->newRow[i] = binaryRuleset[6];
                     }
                     else
                     {
-                        gPtr->newRow[i] = 1;
+                        gPtr->newRow[i] = binaryRuleset[7];
                     }
                 }
                 printRow(gPtr->newRow);
@@ -47,7 +82,7 @@ int main()
         {
             printf("Could not initialise grid values successfully.\n");
         }
-    free(gPtr);
+        free(gPtr);
     }
     else // if memory couldn't be allocated.
     {
@@ -69,6 +104,7 @@ int initialiseRows(GridGenerations *gridPtr)
     }
     return 0;
 }
+
 // Print out a given row.
 void printRow(int row[])
 {
