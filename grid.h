@@ -9,3 +9,6 @@ typedef struct gridGenerations {
 
 int initialiseRows(GridGenerations *gridPtr);
 void printRow(int row[]);
+int generateAutomaton();
+int collectGenerationInfo(int *ruleset, int *genNumber);
+int convertRulesetToBinary(int number, int *binary);
