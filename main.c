@@ -1,30 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "grid.h"
-/*
-int collectGenerationInfo(int *genNumber)
-{
-    printf("Enter the number of generations you wish to create: ");
-    scanf("%d", genNumber);
-    if(*genNumber < 1 || *genNumber > 30)
-    {
-        return 1;
-    }
-    return 0;
-}
-*/
 
 int main()
 {
-    int binaryRuleset[] = {0,0,0,1,1,1,1,0}; 
-    
+    int binary[8] = {0,0,0,0,0,0,0,0};
+    int *binPtr = binary;
+    int ruleset = 0;
+    int numOfGens = 0;
+    if(collectGenerationInfo(&ruleset, &numOfGens) != 0)
+    {
+        printf("Invalid generation information. \n");
+    }
+    else
+    {
+        convertRulesetToBinary(ruleset, binPtr);
+        generateAutomaton(binPtr, numOfGens);
+
+    }
+}
+
+int generateAutomaton(int *binaryRuleset, int numberOfGens)
+{
     // Create a Grid pointer and allocate memory.
     GridGenerations *gPtr;
     gPtr = (GridGenerations*)malloc(sizeof(GridGenerations));
     // If memory was successfully allocated.
     if(gPtr != NULL)
     {
-        int numberOfGens = 14;
         // If the grid was successfully initialised
         if(initialiseRows(gPtr) == 0)
         {
@@ -81,13 +84,16 @@ int main()
         else // if values were not successfull initialised.
         {
             printf("Could not initialise grid values successfully.\n");
+            return 1;
         }
         free(gPtr);
     }
     else // if memory couldn't be allocated.
     {
         printf("Could not allocate memory successfully; no grid can be created.\n");
+        return 1;
     }
+    return 0;
 }
 // Set all rows of a grid object to 0.
 int initialiseRows(GridGenerations *gridPtr)
@@ -122,3 +128,43 @@ void printRow(int row[])
     }
     printf("|\n");
 }
+
+int collectGenerationInfo(int *ruleset, int *genNumber)
+{
+    printf("Enter the number of generations you wish to create: ");
+    scanf("%d", genNumber);
+    if(*genNumber < 1 || *genNumber > 30)
+    {
+        return 1;
+    }
+    printf("Enter the ruleset number between 0 and 255 (e.g. 30): ");
+    scanf("%d", ruleset);
+    if(*ruleset < 0  || *ruleset > 255)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+int convertRulesetToBinary(int number, int *binary)
+{
+    int bits[8] = {128, 64, 32, 16, 8, 4, 2, 1};
+    printf("IN: Ruleset %d as binary: ", number);
+    for(int i = 0; i < 8; i++)
+    {
+        if((number % bits[i] != number))
+        {
+            binary[i] = 1;
+            number %= bits[i];
+        }
+        else
+        {
+            binary[i] = 0;
+        }
+        printf("%d", binary[i]);
+    }
+    printf("\n");
+    return 0;
+}
+
