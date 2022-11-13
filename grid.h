@@ -12,3 +12,5 @@ void printRow(int row[]);
 int generateAutomaton();
 int collectGenerationInfo(int *ruleset, int *genNumber);
 int convertRulesetToBinary(int number, int *binary);
+int sendToFile();
+void writeRow();
