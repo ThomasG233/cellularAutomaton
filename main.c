@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "grid.h"
+#include <ctype.h> // for toupper() used in send to file
+#include <stdbool.h>
+#include <string.h>
 
 int main()
 {
@@ -8,6 +11,7 @@ int main()
     int *binPtr = binary;
     int ruleset = 0;
     int numOfGens = 0;
+    char fileName[30] = {'\0'};
     if(collectGenerationInfo(&ruleset, &numOfGens) != 0)
     {
         printf("Invalid generation information. \n");
@@ -15,16 +19,28 @@ int main()
     else
     {
         convertRulesetToBinary(ruleset, binPtr);
-        generateAutomaton(binPtr, numOfGens);
-
+        sendToFile(fileName);
+        generateAutomaton(binPtr, numOfGens, fileName);
     }
 }
 
-int generateAutomaton(int *binaryRuleset, int numberOfGens)
+int sendToFile(char fileName[]){
+    char check;
+    printf("Would you like to send the output to a file? (Y/N): ");
+    scanf(" %c", &check);
+    if(check=='Y'){
+        printf("Enter the name of a file to output to: ");
+        scanf("%s", fileName);
+    } 
+    return 1;
+}
+
+int generateAutomaton(int *binaryRuleset, int numberOfGens, char fileName[])
 {
     // Create a Grid pointer and allocate memory.
     GridGenerations *gPtr;
     gPtr = (GridGenerations*)malloc(sizeof(GridGenerations));
+    bool firstLine = true;
     // If memory was successfully allocated.
     if(gPtr != NULL)
     {
@@ -74,12 +90,29 @@ int generateAutomaton(int *binaryRuleset, int numberOfGens)
                     }
                 }
                 printRow(gPtr->newRow);
+
+                // Name will only be empty if the user chose not to save to file.
+                if (strlen(fileName)!=0){
+                    FILE *fp;
+                    // Overwrite any existing info on first line, then append on subsequent loops
+                    if(firstLine==true){
+                        fp = fopen(fileName, "w");
+                        firstLine=false;
+                    } else {
+                        fp = fopen(fileName, "a");
+                    }
+                    if(fp!=NULL){
+                        writeRow(fp, gPtr->previousRow);
+                    }
+                    fclose(fp);
+                }
+
                 // Copy old generation to the new generation.
                 for(int i = 1; i < GRID_SIZE; i++)
-                {
-                    gPtr->previousRow[i] = gPtr->newRow[i];
+                    {
+                        gPtr->previousRow[i] = gPtr->newRow[i];
+                    }
                 }
-            }
         }
         else // if values were not successfull initialised.
         {
@@ -109,6 +142,23 @@ int initialiseRows(GridGenerations *gridPtr)
         gridPtr->newRow[i] = 0;
     }
     return 0;
+}
+
+void writeRow(FILE *fp,int row[]){
+    if (fp!=NULL){
+        for(int i = 1; i < GRID_SIZE-1; i++){
+            fprintf(fp, "|");
+            if(row[i] == 1)
+            {
+                fprintf(fp, "█");
+            }
+            else
+            {
+                fprintf(fp, " ");
+            }
+        }
+        fprintf(fp, "|\n");
+    }
 }
 
 // Print out a given row.
@@ -167,4 +217,3 @@ int convertRulesetToBinary(int number, int *binary)
     printf("\n");
     return 0;
 }
-
