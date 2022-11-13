@@ -6,25 +6,37 @@
 #include <string.h>
 
 int main()
-{
-    int binary[8] = {0,0,0,0,0,0,0,0};
-    int *binPtr = binary;
-    int ruleset = 0;
-    int numOfGens = 0;
+{   
     char fileName[30] = {'\0'};
-    if(collectGenerationInfo(&ruleset, &numOfGens) != 0)
+    GridGenerations *gPtr = (GridGenerations*)malloc(sizeof(GridGenerations));
+    if(initialiseGrid(gPtr) == 1)
     {
-        printf("Invalid generation information. \n");
+        printf("Could not allocate memory to a generation successfully.");
     }
     else
     {
-        convertRulesetToBinary(ruleset, binPtr);
-        sendToFile(fileName);
-        generateAutomaton(binPtr, numOfGens, fileName);
-    }
+        if(collectGenerationInfo(&gPtr->ruleset, &gPtr->numOfGens) != 0)
+        {
+            printf("Invalid generation information. \n");
+        }
+        else
+        {
+            if(convertRulesetToBinary(gPtr->ruleset, gPtr->binary) == 0)
+            {
+                sendToFile(fileName);
+                generateAutomaton(gPtr, fileName);
+            }
+            else
+            {
+                printf("Could not convert to binary correctly.");
+            }
+        }
+        free(gPtr);
+    }    
 }
 
-int sendToFile(char fileName[]){
+int sendToFile(char fileName[])
+{
     char check;
     printf("Would you like to send the output to a file? (Y/N): ");
     scanf(" %c", &check);
@@ -35,118 +47,12 @@ int sendToFile(char fileName[]){
     return 1;
 }
 
-int generateAutomaton(int *binaryRuleset, int numberOfGens, char fileName[])
+void writeRow(FILE *fp, char row[])
 {
-    // Create a Grid pointer and allocate memory.
-    GridGenerations *gPtr;
-    gPtr = (GridGenerations*)malloc(sizeof(GridGenerations));
-    bool firstLine = true;
-    // If memory was successfully allocated.
-    if(gPtr != NULL)
+    if(fp!=NULL)
     {
-        // If the grid was successfully initialised
-        if(initialiseRows(gPtr) == 0)
+        for(int i = 1; i < GRID_SIZE-1; i++)
         {
-            // Basic test to see if it generates like in the video.
-            gPtr->previousRow[15] = 1;
-            printRow(gPtr->previousRow);
-            // Repeat automaton for each new iteration of the grid.
-            for(int j = 0; j < numberOfGens; j++)
-            {
-                for(int i = 1; i < GRID_SIZE; i++)
-                {
-                    // Checks to see if ruleset applies.
-                    if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[0];
-                    }
-                    else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[1];
-                    }
-                    else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[2];
-                    }
-                    else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 0)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[3];
-                    }
-                    else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[4];
-                    }
-                    else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[5];
-                    }
-                    else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
-                    {
-                        gPtr->newRow[i] = binaryRuleset[6];
-                    }
-                    else
-                    {
-                        gPtr->newRow[i] = binaryRuleset[7];
-                    }
-                }
-                printRow(gPtr->newRow);
-
-                // Name will only be empty if the user chose not to save to file.
-                if (strlen(fileName)!=0){
-                    FILE *fp;
-                    // Overwrite any existing info on first line, then append on subsequent loops
-                    if(firstLine==true){
-                        fp = fopen(fileName, "w");
-                        firstLine=false;
-                    } else {
-                        fp = fopen(fileName, "a");
-                    }
-                    if(fp!=NULL){
-                        writeRow(fp, gPtr->previousRow);
-                    }
-                    fclose(fp);
-                }
-
-                // Copy old generation to the new generation.
-                for(int i = 1; i < GRID_SIZE; i++)
-                    {
-                        gPtr->previousRow[i] = gPtr->newRow[i];
-                    }
-                }
-        }
-        else // if values were not successfull initialised.
-        {
-            printf("Could not initialise grid values successfully.\n");
-            return 1;
-        }
-        free(gPtr);
-    }
-    else // if memory couldn't be allocated.
-    {
-        printf("Could not allocate memory successfully; no grid can be created.\n");
-        return 1;
-    }
-    return 0;
-}
-// Set all rows of a grid object to 0.
-int initialiseRows(GridGenerations *gridPtr)
-{   
-    if(gridPtr == NULL)
-    {
-        return 1;
-    }
-
-    for(int i = 0; i < GRID_SIZE; i++)
-    {
-        gridPtr->previousRow[i] = 0;
-        gridPtr->newRow[i] = 0;
-    }
-    return 0;
-}
-
-void writeRow(FILE *fp,int row[]){
-    if (fp!=NULL){
-        for(int i = 1; i < GRID_SIZE-1; i++){
             fprintf(fp, "|");
             if(row[i] == 1)
             {
@@ -161,8 +67,115 @@ void writeRow(FILE *fp,int row[]){
     }
 }
 
+int generateAutomaton(GridGenerations *gPtr, char fileName[])
+{
+    bool firstLine = true;
+    // If memory was successfully allocated.
+    if(gPtr != NULL)
+    {
+         // Basic test to see if it generates like in the video.
+        gPtr->previousRow[15] = 1;
+        printRow(gPtr->previousRow);
+        // Repeat automaton for each new iteration of the grid.
+        for(int j = 0; j < gPtr->numOfGens; j++)
+        {
+            for(int i = 1; i < GRID_SIZE-1; i++)
+            {
+                // Checks to see if ruleset applies.
+                if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1)
+                {
+                    gPtr->newRow[i] = gPtr->binary[0];
+                }
+                else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
+                {
+                    gPtr->newRow[i] = gPtr->binary[1];
+                }
+                else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
+                {
+                    gPtr->newRow[i] = gPtr->binary[2];
+                }
+                else if(gPtr->previousRow[i-1] == 1 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 0)
+                {
+                    gPtr->newRow[i] = gPtr->binary[3];
+                }
+                else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 1)
+                {
+                    gPtr->newRow[i] = gPtr->binary[4];
+                }
+                else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 1 && gPtr->previousRow[i+1] == 0)
+                {
+                    gPtr->newRow[i] = gPtr->binary[5];
+                }
+                else if(gPtr->previousRow[i-1] == 0 && gPtr->previousRow[i] == 0 && gPtr->previousRow[i+1] == 1)
+                {
+                    gPtr->newRow[i] = gPtr->binary[6];
+                }
+                else
+                {
+                    gPtr->newRow[i] = gPtr->binary[7];
+                }
+            }
+
+            // Name will only be empty if the user chose not to save to file.
+            if(strlen(fileName) != 0)
+            {
+                FILE *fp;
+                // Overwrite any existing info on first line, then append on subsequent loops
+                if(firstLine==true)
+                {
+                    fp = fopen(fileName, "w");
+                    firstLine=false;
+                } 
+                else 
+                {
+                    fp = fopen(fileName, "a");
+                }
+                if(fp!=NULL)
+                {
+                    writeRow(fp, gPtr->previousRow);
+                }
+                fclose(fp);
+            }
+            printRow(gPtr->newRow);
+            // Copy old generation to the new generation.
+            for(int i = 1; i < GRID_SIZE-1; i++)
+            {
+                gPtr->previousRow[i] = gPtr->newRow[i];
+            }
+        }
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}
+// Set all rows of a grid object to 0.
+int initialiseGrid(GridGenerations *gridPtr)
+{   
+    if(gridPtr == NULL)
+    {
+        return 1;
+    }
+
+    for(int i = 0; i < GRID_SIZE; i++)
+    {
+        gridPtr->previousRow[i] = 0;
+        gridPtr->newRow[i] = 0;
+        if(i < 8)
+        {
+            gridPtr->binary[i] = 0;
+        }
+    }
+
+    gridPtr->ruleset = -1;
+    gridPtr->numOfGens = -1;
+
+    return 0;
+}
+
 // Print out a given row.
-void printRow(int row[])
+void printRow(char row[])
 {
     for(int i = 1; i < GRID_SIZE-1; i++)
     {
@@ -193,14 +206,19 @@ int collectGenerationInfo(int *ruleset, int *genNumber)
     {
         return 1;
     }
-
     return 0;
 }
 
 int convertRulesetToBinary(int number, int *binary)
 {
+    if(binary == NULL)
+    {
+        return 1;
+    }
+    
     int bits[8] = {128, 64, 32, 16, 8, 4, 2, 1};
-    printf("IN: Ruleset %d as binary: ", number);
+    
+    printf("Ruleset %d as binary: ", number);
     for(int i = 0; i < 8; i++)
     {
         if((number % bits[i] != number))
@@ -217,3 +235,24 @@ int convertRulesetToBinary(int number, int *binary)
     printf("\n");
     return 0;
 }
+
+int convertRulesetToDecimal(int binary[], int *number)
+{
+    if(number == NULL)
+    {
+        return 1;
+    }
+    int bits[8] = {128, 64, 32, 16, 8, 4, 2, 1};
+    printf("Ruleset %d as binary: ", *number);
+    for(int i = 0; i < 8; i++)
+    {
+        printf("%d", binary[i]);
+        if((binary[i] == 1))
+        {
+            *number = *number + bits[i];
+        }
+    }
+    printf("\nAs decimal: %d\n", *number);
+    return 0;
+}
+
